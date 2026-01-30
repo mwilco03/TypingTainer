@@ -826,7 +826,8 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
   if (gameState === 'ready') {
     return (
       <div
-        className="min-h-screen flex flex-col relative overflow-hidden select-none"
+        className="min-h-screen flex flex-col relative overflow-hidden select-none cursor-pointer"
+        onClick={startGame}
         style={{
           background: 'linear-gradient(180deg, #7dd3fc 0%, #38bdf8 30%, #0ea5e9 60%, #0284c7 100%)',
         }}
@@ -845,7 +846,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
 
         {/* Back button */}
         <button
-          onClick={() => onNavigate('#/')}
+          onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 z-30 bg-white/20 hover:bg-white/40 backdrop-blur text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
         >
           &larr; Home
@@ -901,7 +902,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
             className="bg-white/20 backdrop-blur-sm px-8 py-4 rounded-2xl border border-white/30 animate-pulse"
           >
             <span className="text-white text-lg font-bold" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-              Press any key to start
+              Tap or press any key to start
             </span>
           </div>
 
@@ -1011,7 +1012,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
               onClick={startGame}
             >
               <span className="text-white text-lg font-bold">
-                Play Again (Enter)
+                Play Again
               </span>
             </div>
 
@@ -1102,7 +1103,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
             }}
           >
             <span className="text-white text-lg font-bold">
-              {failed ? 'See Results (Enter)' : `Next Round (Enter)`}
+              {failed ? 'See Results' : 'Next Round'}
             </span>
           </div>
         </div>

@@ -437,7 +437,8 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
   // ============================================================================
   if (gameState === 'ready') {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4 cursor-pointer"
+        onClick={startNewRound}>
         <input
           ref={inputRef}
           className="mobile-input"
@@ -451,7 +452,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
         />
 
         <button
-          onClick={() => onNavigate('#/')}
+          onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 text-gray-500 hover:text-white text-sm transition-colors"
         >
           &larr; Home
@@ -505,7 +506,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
         )}
 
         <div className="animate-pulse text-lg text-teal-400 font-medium">
-          Press any key to start
+          Tap or press any key to start
         </div>
       </div>
     );
@@ -574,7 +575,6 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
             Back to Home
           </button>
         </div>
-        <div className="text-gray-700 text-xs mt-6">Press Enter to play again</div>
       </div>
     );
   }

@@ -562,13 +562,14 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
 
   if (screen === 'ready') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center select-none"
+      <div className="min-h-screen flex flex-col items-center justify-center select-none cursor-pointer"
+        onClick={startGame}
         style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 50%, #2d1b69 100%)' }}>
         <input ref={inputRef} className="mobile-input"
           inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
           onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
-        <button onClick={() => onNavigate('#/')}
+        <button onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 z-30 bg-white/10 hover:bg-white/20 text-white/70 px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
           &larr; Home
         </button>
@@ -596,7 +597,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         </p>
 
         <div className="bg-purple-500/20 backdrop-blur px-8 py-4 rounded-2xl border border-purple-400/30 animate-pulse">
-          <span className="text-purple-200 text-lg font-bold">Press any key to start</span>
+          <span className="text-purple-200 text-lg font-bold">Tap or press any key to start</span>
         </div>
 
         {progressData?.gameProgress?.typedance?.highScore > 0 && (
@@ -666,7 +667,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button onClick={startGame}
             className="bg-purple-500/30 hover:bg-purple-500/50 text-white px-8 py-4 rounded-2xl font-bold text-lg border border-purple-400/30 transition-all">
-            Play Again (Enter)
+            Play Again
           </button>
           <button onClick={() => onNavigate('#/')}
             className="bg-white/10 hover:bg-white/20 text-white/60 px-6 py-3 rounded-xl font-medium transition-all text-sm">
@@ -709,7 +710,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button onClick={() => startLevel(level + 1)}
             className="bg-green-500/30 hover:bg-green-500/50 text-white px-8 py-4 rounded-2xl font-bold text-lg border border-green-400/30 transition-all animate-pulse">
-            Next Level (Enter)
+            Next Level
           </button>
           <button onClick={handleQuit}
             className="bg-white/10 hover:bg-white/20 text-white/60 px-6 py-3 rounded-xl font-medium transition-all text-sm">
