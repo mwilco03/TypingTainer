@@ -385,6 +385,16 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
+  }, [handleKeyDown]);
+
   // Cleanup animation on unmount
   useEffect(() => () => stopAnimation(), [stopAnimation]);
 
@@ -430,9 +440,14 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
           autoFocus
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         />
 
         <button
@@ -504,9 +519,14 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
           autoFocus
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         />
 
         <button
@@ -569,9 +589,14 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       {/* Hidden input for keystroke capture */}
       <input
         ref={inputRef}
-        className="opacity-0 absolute pointer-events-none"
+        className="mobile-input"
+        inputMode="text"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        onInput={handleMobileInput}
         autoFocus
-        onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+        onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
       />
 
       {/* ---- Top bar ---- */}

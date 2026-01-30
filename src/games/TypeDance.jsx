@@ -491,6 +491,16 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
+  }, [handleKeyDown]);
+
   // ============================================================================
   // END SESSION
   // ============================================================================
@@ -554,8 +564,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return (
       <div className="min-h-screen flex flex-col items-center justify-center select-none"
         style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 50%, #2d1b69 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
         <button onClick={() => onNavigate('#/')}
           className="absolute top-4 left-4 z-30 bg-white/10 hover:bg-white/20 text-white/70 px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
@@ -609,8 +620,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return (
       <div className="min-h-screen flex flex-col items-center justify-center select-none"
         style={{ background: 'linear-gradient(180deg, #1a0a2e 0%, #2d1045 50%, #1a0525 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
         <h1 className="text-5xl font-black text-white mb-6"
           style={{ textShadow: '0 0 30px rgba(239,68,68,0.5)' }}>
@@ -674,8 +686,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return (
       <div className="min-h-screen flex flex-col items-center justify-center select-none"
         style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1b2838 50%, #0d1f2d 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
         <h1 className="text-4xl font-black text-white mb-2"
           style={{ textShadow: '0 0 30px rgba(34,197,94,0.5)' }}>
@@ -717,8 +730,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
   return (
     <div className="min-h-screen flex flex-col select-none overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 100%)' }}>
-      <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-        onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+      <input ref={inputRef} className="mobile-input"
+        inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+        onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
       {/* HUD */}
       <div className="flex items-center justify-between px-4 py-2 z-30 relative">
