@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // --- Finger color scheme ---
 const FINGER_COLORS = {
@@ -82,6 +82,15 @@ const STEPS = [
   },
 ];
 
+// Keys the student must press to advance each step
+const STEP_REQUIRED_KEYS = [
+  ['f', 'j'],                                    // Step 0: Find F and J
+  ['f', 'j'],                                    // Step 1: Place index fingers
+  ['a', 's', 'd', 'f', 'j', 'k', 'l', ';'],    // Step 2: All home row
+  [' '],                                          // Step 3: Space bar
+  null,                                           // Step 4: Any key to finish
+];
+
 // --- CSS keyframes injected once ---
 const KEYFRAME_STYLES = `
 @keyframes fingerLand {
@@ -114,7 +123,7 @@ const KEYFRAME_STYLES = `
 
 // --- Sub-components ---
 
-function KeyboardKey({ label, isHighlighted, fingerColor, showBump, doPulse, animDelay }) {
+function KeyboardKey({ label, isHighlighted, fingerColor, showBump, doPulse, animDelay, isPressed }) {
   const isSpace = label === 'Space';
 
   const baseClasses = [
@@ -157,9 +166,22 @@ function KeyboardKey({ label, isHighlighted, fingerColor, showBump, doPulse, ani
     style.animation = `gentlePulse 2s ease-in-out infinite, fingerLand 0.45s ${animDelay}s cubic-bezier(0.34, 1.56, 0.64, 1) both`;
   }
 
+  if (isPressed) {
+    style.boxShadow = '0 0 0 3px #22c55e, 0 0 12px rgba(34, 197, 94, 0.4)';
+    style.transform = 'scale(0.95)';
+  }
+
   return (
     <div className={baseClasses} style={style}>
       {label === ';' ? '; ' : label === 'Space' ? 'SPACE' : label}
+      {/* Pressed checkmark */}
+      {isPressed && (
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      )}
       {/* Bump indicator for F and J */}
       {showBump && (label === 'F' || label === 'J') && (
         <span
@@ -266,6 +288,7 @@ function ThumbIndicator({ side }) {
 
 export default function HandPlacement({ onComplete }) {
   const [step, setStep] = useState(0);
+  const [pressedKeys, setPressedKeys] = useState(new Set());
 
   const isLastStep = step === STEPS.length - 1;
   const isFinalReady = step === STEPS.length; // past the last instructional step
@@ -289,6 +312,54 @@ export default function HandPlacement({ onComplete }) {
     }
   };
 
+  // Reset pressed keys when step changes
+  useEffect(() => {
+    setPressedKeys(new Set());
+  }, [step]);
+
+  // Keyboard: space to skip, required keys to advance
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key.length !== 1) return; // ignore modifiers
+      e.preventDefault();
+      const key = e.key.toLowerCase();
+
+      // Space skips onboarding on early steps (before space is taught)
+      if (key === ' ' && step < 3) {
+        onComplete();
+        return;
+      }
+
+      // Final ready screen — any key completes
+      if (step === STEPS.length) {
+        onComplete();
+        return;
+      }
+
+      // Last instructional step — any key advances to ready screen
+      if (step === STEPS.length - 1) {
+        setStep(STEPS.length);
+        return;
+      }
+
+      // Track key press for step advancement
+      setPressedKeys(prev => new Set([...prev, key]));
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, onComplete]);
+
+  // Advance when all required keys for the current step are pressed
+  useEffect(() => {
+    if (step >= STEPS.length - 1) return;
+    const required = STEP_REQUIRED_KEYS[step];
+    if (!required) return;
+    if (required.every(k => pressedKeys.has(k))) {
+      setStep(s => s + 1);
+    }
+  }, [pressedKeys, step]);
+
   // Determine which keys get colored for current step
   const colorSet = new Set(current.colorKeys);
   const highlightSet = new Set(current.highlightKeys);
@@ -299,6 +370,11 @@ export default function HandPlacement({ onComplete }) {
     const idx = colorKeyOrder.indexOf(key);
     return idx >= 0 ? idx * 0.08 : 0;
   };
+
+  // Which required keys has the student pressed so far?
+  const requiredSet = step < STEPS.length && STEP_REQUIRED_KEYS[step]
+    ? new Set(STEP_REQUIRED_KEYS[step])
+    : null;
 
   return (
     <>
@@ -363,6 +439,7 @@ export default function HandPlacement({ onComplete }) {
                         showBump={current.showBumps}
                         doPulse={current.pulseAll}
                         animDelay={getDelay(key)}
+                        isPressed={requiredSet && requiredSet.has(key.toLowerCase()) && pressedKeys.has(key.toLowerCase())}
                       />
                     );
                   })}
@@ -385,6 +462,7 @@ export default function HandPlacement({ onComplete }) {
                   showBump={false}
                   doPulse={current.pulseAll}
                   animDelay={getDelay('Space')}
+                  isPressed={requiredSet && requiredSet.has(' ') && pressedKeys.has(' ')}
                 />
               </div>
             </div>
@@ -392,6 +470,22 @@ export default function HandPlacement({ onComplete }) {
             {/* Finger legend -- show when colors are visible */}
             {current.colorKeys.length > 0 && <FingerLegend />}
           </div>
+
+          {/* Keyboard hint */}
+          {!isFinalReady && (
+            <p className="text-center text-xs text-gray-400 mb-4">
+              {step < 3
+                ? 'Press the highlighted keys to continue \u00B7 space to skip'
+                : step === 3
+                ? 'Press the space bar'
+                : 'Press any key to continue'}
+            </p>
+          )}
+          {isFinalReady && (
+            <p className="text-center text-xs text-gray-400 mb-4">
+              Press any key to start typing!
+            </p>
+          )}
 
           {/* Navigation */}
           <div className="flex items-center justify-between">
