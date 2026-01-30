@@ -366,10 +366,14 @@ function encodeParentChallenge(keyMetrics) {
     t: Date.now(),
   };
 
-  // Simple base64 encoding -- the QR code will contain a URL
+  // URL-safe base64 encoding -- the QR code will contain a URL
   // like /TypingTainer/#/challenge/<encoded>
+  // Standard base64 uses +, /, = which break URL routing, so replace them
   try {
-    return btoa(JSON.stringify(challenge));
+    return btoa(JSON.stringify(challenge))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
   } catch {
     return null;
   }
@@ -377,7 +381,10 @@ function encodeParentChallenge(keyMetrics) {
 
 function decodeParentChallenge(encoded) {
   try {
-    return JSON.parse(atob(encoded));
+    // Reverse URL-safe base64: - → +, _ → /, re-pad with =
+    let b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    return JSON.parse(atob(b64));
   } catch {
     return null;
   }
