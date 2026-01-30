@@ -31,7 +31,6 @@ const GAMES = [
     color: 'from-green-500 to-teal-600',
     description: 'A word bounces back and forth. Type it before it reaches your side. Speed increases as you level up.',
     category: 'arcade',
-    comingSoon: true,
   },
   {
     id: 'duckhunt',
@@ -42,7 +41,6 @@ const GAMES = [
     color: 'from-orange-500 to-red-600',
     description: 'Words appear and start flying away. Type them to score before they escape!',
     category: 'arcade',
-    comingSoon: true,
   },
   {
     id: 'kitchen',
@@ -53,7 +51,6 @@ const GAMES = [
     color: 'from-amber-500 to-orange-600',
     description: 'A relaxing kitchen scene. Read the clue, find the item, type its name. No timer, no pressure.',
     category: 'break',
-    comingSoon: true,
   },
 ];
 
@@ -162,7 +159,7 @@ function ProfileSetup({ profile, onSetProfile, onClose }) {
   );
 }
 
-export default function Hub({ progressData, onNavigate, onSetProfile }) {
+export default function Hub({ progressData, onNavigate, onSetProfile, onShowAccessibility }) {
   const [showProfile, setShowProfile] = useState(false);
 
   const { profile, stars } = progressData;
@@ -301,6 +298,24 @@ export default function Hub({ progressData, onNavigate, onSetProfile }) {
           >
             Progress Report
           </button>
+          <span className="text-gray-300">|</span>
+          <button
+            onClick={() => onNavigate('#/onboarding')}
+            className="text-gray-400 hover:text-gray-600 font-medium"
+          >
+            Hand Placement
+          </button>
+          {onShowAccessibility && (
+            <>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={onShowAccessibility}
+                className="text-gray-400 hover:text-gray-600 font-medium"
+              >
+                Accessibility
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

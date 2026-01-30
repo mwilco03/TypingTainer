@@ -2,8 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ProgressionEngine from './engine/ProgressionEngine';
 import Hub from './pages/Hub';
 import ProgressReport from './pages/ProgressReport';
+import HandPlacement from './components/HandPlacement';
+import AccessibilityModal from './components/AccessibilityModal';
+import { useAccessibility } from './components/AccessibilityModal';
 import TypeFlow from './games/TypeFlow';
 import TypingTutor from './games/TypingTutor';
+import TypePong from './games/TypePong';
+import WordHunt from './games/WordHunt';
+import KitchenISpy from './games/KitchenISpy';
 
 // Simple hash-based router
 function useHashRoute() {
@@ -24,7 +30,12 @@ function useHashRoute() {
 
 export default function App() {
   const [progressData, setProgressData] = useState(() => ProgressionEngine.load());
+  const [showA11y, setShowA11y] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('typingTainer_onboarded');
+  });
   const { route, navigate } = useHashRoute();
+  const a11ySettings = useAccessibility();
 
   // Save whenever progress changes
   useEffect(() => {
@@ -60,6 +71,16 @@ export default function App() {
     }
   }, []);
 
+  // Show hand placement onboarding on first visit
+  if (showOnboarding) {
+    return (
+      <HandPlacement onComplete={() => {
+        localStorage.setItem('typingTainer_onboarded', '1');
+        setShowOnboarding(false);
+      }} />
+    );
+  }
+
   // Route matching
   const routePath = route.replace('#', '').split('/').filter(Boolean);
   const page = routePath[0] || '';
@@ -72,29 +93,59 @@ export default function App() {
     onNavigate: navigate,
   };
 
+  let content;
   switch (page) {
     case 'typeflow':
-      return <TypeFlow {...sharedProps} />;
+      content = <TypeFlow {...sharedProps} />;
+      break;
 
     case 'typequest':
-      return <TypingTutor {...sharedProps} />;
+      content = <TypingTutor {...sharedProps} />;
+      break;
+
+    case 'pong':
+      content = <TypePong {...sharedProps} />;
+      break;
+
+    case 'duckhunt':
+      content = <WordHunt {...sharedProps} />;
+      break;
+
+    case 'kitchen':
+      content = <KitchenISpy {...sharedProps} />;
+      break;
 
     case 'progress':
-      return (
+      content = (
         <ProgressReport
           progressData={progressData}
           onNavigate={navigate}
           onReset={onResetAll}
         />
       );
+      break;
+
+    case 'onboarding':
+      content = (
+        <HandPlacement onComplete={() => navigate('#/')} />
+      );
+      break;
 
     default:
-      return (
+      content = (
         <Hub
           progressData={progressData}
           onNavigate={navigate}
           onSetProfile={onSetProfile}
+          onShowAccessibility={() => setShowA11y(true)}
         />
       );
   }
+
+  return (
+    <>
+      {content}
+      {showA11y && <AccessibilityModal onClose={() => setShowA11y(false)} />}
+    </>
+  );
 }

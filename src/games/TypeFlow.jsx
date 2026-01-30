@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import ProgressionEngine from '../engine/ProgressionEngine';
 
 // ============================================================================
 // MODULES - Structured learning path with adaptive content within each
@@ -381,22 +382,67 @@ const AdaptiveEngine = {
     return result.slice(0, 4).join(' ');
   },
 
-  generateChallenge(phase, currentModule, nextModule, keyMetrics, bigramMetrics) {
+  // Generate a spaced repetition review fragment for keys due for review
+  generateReviewFragment(reviewKeys, moduleKeys, keyMetrics) {
+    // Only review keys that belong to the current or earlier modules
+    const moduleSet = new Set(moduleKeys);
+    const applicable = reviewKeys.filter(k => moduleSet.has(k));
+    if (applicable.length === 0) return '';
+
+    const patterns = [];
+    for (const key of applicable.slice(0, 2)) {
+      const partner = this.getPartnerKey(key);
+      if (partner && moduleSet.has(partner)) {
+        patterns.push(key + partner + key + partner);
+      } else {
+        patterns.push(key.repeat(4));
+      }
+    }
+
+    // Also find a word using review keys
+    const keySet = new Set(moduleKeys);
+    const reviewWord = Object.values(WORD_BANKS)
+      .flat()
+      .filter(w => w.split('').every(c => keySet.has(c)))
+      .filter(w => w.split('').some(c => applicable.includes(c)))
+      .sort(() => Math.random() - 0.5)[0];
+
+    if (reviewWord) patterns.push(reviewWord);
+    return patterns.join(' ');
+  },
+
+  generateChallenge(phase, currentModule, nextModule, keyMetrics, bigramMetrics, reviewKeys) {
+    let base;
     switch (phase) {
       case PHASE.DRILL:
-        return this.generateDrill(currentModule.keys, keyMetrics);
+        base = this.generateDrill(currentModule.keys, keyMetrics);
+        break;
       case PHASE.WORDS:
-        return this.generateWords(currentModule.keys, keyMetrics);
+        base = this.generateWords(currentModule.keys, keyMetrics);
+        break;
       case PHASE.COMPLEXITY:
         if (nextModule) {
-          return this.generateComplexity(currentModule, nextModule, keyMetrics);
+          base = this.generateComplexity(currentModule, nextModule, keyMetrics);
+        } else {
+          base = this.generateWords(currentModule.keys, keyMetrics);
         }
-        return this.generateWords(currentModule.keys, keyMetrics);
+        break;
       case PHASE.MASTERY:
-        return this.generateMastery(currentModule.keys, keyMetrics, bigramMetrics);
+        base = this.generateMastery(currentModule.keys, keyMetrics, bigramMetrics);
+        break;
       default:
-        return this.generateDrill(currentModule.keys, keyMetrics);
+        base = this.generateDrill(currentModule.keys, keyMetrics);
     }
+
+    // Inject spaced repetition review ~30% of the time when reviews are due
+    if (reviewKeys && reviewKeys.length > 0 && Math.random() < 0.3) {
+      const review = this.generateReviewFragment(reviewKeys, currentModule.keys, keyMetrics);
+      if (review) {
+        return review + ' ' + base;
+      }
+    }
+
+    return base;
   },
 
   checkModuleComplete(keystrokes, module) {
@@ -764,12 +810,16 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
     const phase = AdaptiveEngine.determinePhase(keystrokes, currentModule, moduleIndex);
     const next = MODULES[moduleIndex + 1] || null;
 
+    // Get keys due for spaced repetition review
+    const reviewKeys = ProgressionEngine.getReviewKeys(progressData);
+
     const text = AdaptiveEngine.generateChallenge(
       phase,
       currentModule,
       next,
       keyMetrics,
-      bigramMetrics
+      bigramMetrics,
+      reviewKeys
     );
 
     setCurrentText(text);
@@ -777,7 +827,7 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
     setErrors(new Set());
     setKeyTimes({});
     setLastKeyTime(Date.now());
-  }, [currentModule, keystrokes, keyMetrics, bigramMetrics]);
+  }, [currentModule, keystrokes, keyMetrics, bigramMetrics, progressData]);
 
   // Start module
   const startModule = useCallback((module) => {

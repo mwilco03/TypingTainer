@@ -56,6 +56,7 @@ function createDefaultData() {
       typequest: { completedLessons: [], achievements: [], totalSessions: 0 },
       pong: { highScore: 0, levelsCleared: 0, totalSessions: 0 },
       duckhunt: { highScore: 0, ducksHit: 0, totalSessions: 0 },
+      kitchen: { completedTiers: [], totalSessions: 0 },
     },
 
     // Session history for parent reports
@@ -404,6 +405,7 @@ const ProgressionEngine = {
             typequest: { ...defaults.gameProgress.typequest, ...(parsed.gameProgress?.typequest || {}) },
             pong: { ...defaults.gameProgress.pong, ...(parsed.gameProgress?.pong || {}) },
             duckhunt: { ...defaults.gameProgress.duckhunt, ...(parsed.gameProgress?.duckhunt || {}) },
+            kitchen: { ...defaults.gameProgress.kitchen, ...(parsed.gameProgress?.kitchen || {}) },
           },
           unlockables: { ...defaults.unlockables, ...(parsed.unlockables || {}) },
         };
