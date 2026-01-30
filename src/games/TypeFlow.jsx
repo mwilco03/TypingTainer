@@ -411,11 +411,26 @@ const AdaptiveEngine = {
     return patterns.join(' ');
   },
 
-  generateChallenge(phase, currentModule, nextModule, keyMetrics, bigramMetrics, reviewKeys) {
+  generateChallenge(phase, currentModule, nextModule, keyMetrics, bigramMetrics, reviewKeys, exerciseCount) {
     let base;
     switch (phase) {
       case PHASE.DRILL:
         base = this.generateDrill(currentModule.keys, keyMetrics);
+        // After 3 drill exercises, inject real words when available
+        if (exerciseCount >= 3) {
+          const keySet = new Set(currentModule.keys);
+          const realWords = Object.values(WORD_BANKS)
+            .flat()
+            .filter(word =>
+              word.length >= 3 &&
+              /[aeiou]/.test(word) &&
+              word.split('').every(c => keySet.has(c))
+            )
+            .sort(() => Math.random() - 0.5);
+          if (realWords.length > 0) {
+            base = base + ' ' + realWords.slice(0, 2).join(' ');
+          }
+        }
         break;
       case PHASE.WORDS:
         base = this.generateWords(currentModule.keys, keyMetrics);
@@ -819,7 +834,8 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
       next,
       keyMetrics,
       bigramMetrics,
-      reviewKeys
+      reviewKeys,
+      exerciseCount
     );
 
     setCurrentText(text);
@@ -827,7 +843,7 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
     setErrors(new Set());
     setKeyTimes({});
     setLastKeyTime(Date.now());
-  }, [currentModule, keystrokes, keyMetrics, bigramMetrics, progressData]);
+  }, [currentModule, keystrokes, keyMetrics, bigramMetrics, progressData, exerciseCount]);
 
   // Start module
   const startModule = useCallback((module) => {
@@ -862,7 +878,7 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
     const typed = e.key;
 
     if (typed.length === 1 || typed === ' ') {
-      e.preventDefault();
+      if (e.preventDefault) e.preventDefault();
 
       const now = Date.now();
       const timeTaken = lastKeyTime ? Math.min(2000, now - lastKeyTime) : 150;
@@ -918,6 +934,17 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Mobile input fallback: convert input events to the same keystroke handler
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
   }, [handleKeyDown]);
 
   // End session
@@ -1084,8 +1111,13 @@ export default function TypeFlow({ progressData, onRecordKeystroke, onEndSession
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-3">
       <input
         ref={inputRef}
-        className="opacity-0 absolute pointer-events-none"
-        onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+        className="mobile-input"
+        inputMode="text"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        onInput={handleMobileInput}
+        onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         autoFocus
       />
 

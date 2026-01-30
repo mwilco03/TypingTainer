@@ -102,9 +102,15 @@ function getLevelConfig(level) {
   return { fallDuration, spawnInterval, pool };
 }
 
-function createNote(level, laneIndex) {
+function createNote(level, laneIndex, notesAlreadySpawned) {
   const config = getLevelConfig(level);
-  const pool = NOTE_POOLS[config.pool];
+  // Warmup: first 4 notes of bigram/word levels use the previous tier
+  let poolName = config.pool;
+  if (notesAlreadySpawned < 4 && level > 2) {
+    if (poolName === 'bigrams') poolName = 'letters';
+    else if (poolName === 'words') poolName = 'bigrams';
+  }
+  const pool = NOTE_POOLS[poolName];
   const text = pool[Math.floor(Math.random() * pool.length)];
 
   return {
@@ -308,7 +314,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
       if (notesSpawnedRef.current < NOTES_PER_LEVEL && now - lastSpawnRef.current > config.spawnInterval) {
         // Pick a random lane, avoid same lane twice in a row
         const lane = Math.floor(Math.random() * LANE_COUNT);
-        const newNote = createNote(levelRef.current, lane);
+        const newNote = createNote(levelRef.current, lane, notesSpawnedRef.current);
         setNotes(prev => [...prev, newNote]);
         setNotesSpawned(prev => {
           const val = prev + 1;
@@ -491,6 +497,16 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
+  }, [handleKeyDown]);
+
   // ============================================================================
   // END SESSION
   // ============================================================================
@@ -552,12 +568,14 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
 
   if (screen === 'ready') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center select-none"
+      <div className="min-h-screen flex flex-col items-center justify-center select-none cursor-pointer"
+        onClick={startGame}
         style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 50%, #2d1b69 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
-        <button onClick={() => onNavigate('#/')}
+        <button onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 z-30 bg-white/10 hover:bg-white/20 text-white/70 px-3 py-1.5 rounded-lg text-sm font-medium transition-all">
           &larr; Home
         </button>
@@ -585,7 +603,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         </p>
 
         <div className="bg-purple-500/20 backdrop-blur px-8 py-4 rounded-2xl border border-purple-400/30 animate-pulse">
-          <span className="text-purple-200 text-lg font-bold">Press any key to start</span>
+          <span className="text-purple-200 text-lg font-bold">Tap or press any key to start</span>
         </div>
 
         {progressData?.gameProgress?.typedance?.highScore > 0 && (
@@ -609,8 +627,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return (
       <div className="min-h-screen flex flex-col items-center justify-center select-none"
         style={{ background: 'linear-gradient(180deg, #1a0a2e 0%, #2d1045 50%, #1a0525 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
         <h1 className="text-5xl font-black text-white mb-6"
           style={{ textShadow: '0 0 30px rgba(239,68,68,0.5)' }}>
@@ -654,7 +673,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button onClick={startGame}
             className="bg-purple-500/30 hover:bg-purple-500/50 text-white px-8 py-4 rounded-2xl font-bold text-lg border border-purple-400/30 transition-all">
-            Play Again (Enter)
+            Play Again
           </button>
           <button onClick={() => onNavigate('#/')}
             className="bg-white/10 hover:bg-white/20 text-white/60 px-6 py-3 rounded-xl font-medium transition-all text-sm">
@@ -674,8 +693,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
     return (
       <div className="min-h-screen flex flex-col items-center justify-center select-none"
         style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1b2838 50%, #0d1f2d 100%)' }}>
-        <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-          onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+        <input ref={inputRef} className="mobile-input"
+          inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+          onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
         <h1 className="text-4xl font-black text-white mb-2"
           style={{ textShadow: '0 0 30px rgba(34,197,94,0.5)' }}>
@@ -696,7 +716,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button onClick={() => startLevel(level + 1)}
             className="bg-green-500/30 hover:bg-green-500/50 text-white px-8 py-4 rounded-2xl font-bold text-lg border border-green-400/30 transition-all animate-pulse">
-            Next Level (Enter)
+            Next Level
           </button>
           <button onClick={handleQuit}
             className="bg-white/10 hover:bg-white/20 text-white/60 px-6 py-3 rounded-xl font-medium transition-all text-sm">
@@ -717,8 +737,9 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
   return (
     <div className="min-h-screen flex flex-col select-none overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #0f0f23 0%, #1a1a3e 100%)' }}>
-      <input ref={inputRef} className="opacity-0 absolute pointer-events-none"
-        onBlur={e => setTimeout(() => e.target?.focus(), 10)} autoFocus />
+      <input ref={inputRef} className="mobile-input"
+        inputMode="text" autoCapitalize="off" autoCorrect="off" autoComplete="off"
+        onInput={handleMobileInput} onBlur={e => setTimeout(() => e.target?.focus(), 50)} autoFocus />
 
       {/* HUD */}
       <div className="flex items-center justify-between px-4 py-2 z-30 relative">

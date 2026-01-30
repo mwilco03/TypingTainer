@@ -77,89 +77,23 @@ function shuffleArray(arr) {
   return shuffled;
 }
 
-function levenshteinDistance(a, b) {
-  const m = a.length;
-  const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
-/** Check a player's typed answer against the expected item name. */
-function checkAnswer(input, answer) {
-  const trimmed = input.trim().toLowerCase();
-  const expected = answer.toLowerCase();
-
-  if (!trimmed) {
-    return { correct: false, nearMiss: false, message: '' };
-  }
-
-  // Exact match
-  if (trimmed === expected) {
-    return { correct: true, nearMiss: false, message: '' };
-  }
-
-  // Match ignoring internal spaces (e.g. "cuttingboard" for "cutting board")
-  const inputNoSpaces = trimmed.replace(/\s+/g, '');
-  const expectedNoSpaces = expected.replace(/\s+/g, '');
-  if (inputNoSpaces === expectedNoSpaces) {
-    return { correct: true, nearMiss: false, message: '' };
-  }
-
-  // Partial match: typed just one word of a multi-word answer
-  const expectedWords = expected.split(' ');
-  if (expectedWords.length > 1 && expectedWords.some((w) => w === trimmed)) {
-    return {
-      correct: false,
-      nearMiss: true,
-      message: "You're on the right track! What's the full name?",
-    };
-  }
-
-  // Fuzzy matching -- Levenshtein distance
-  const dist = levenshteinDistance(trimmed, expected);
-  const threshold = expected.length <= 4 ? 1 : expected.length <= 7 ? 2 : 3;
-
-  if (dist > 0 && dist <= threshold) {
-    return { correct: false, nearMiss: true, message: 'Almost! Check your spelling.' };
-  }
-
-  // Also try without spaces for multi-word answers
-  if (expectedWords.length > 1) {
-    const distNoSpaces = levenshteinDistance(inputNoSpaces, expectedNoSpaces);
-    if (distNoSpaces > 0 && distNoSpaces <= threshold) {
-      return { correct: false, nearMiss: true, message: 'Almost! Check your spelling.' };
-    }
-  }
-
-  return { correct: false, nearMiss: false, message: 'Not quite. Try again!' };
-}
-
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
 
 /** A single kitchen item card in the scene grid. */
-function KitchenItemCard({ item, isFound, isTarget, isJustFound }) {
+function KitchenItemCard({ item, isFound, isJustFound, isWrong, onClick }) {
   return (
     <div
+      onClick={!isFound ? onClick : undefined}
       className={[
         'relative bg-white rounded-xl p-3 flex flex-col items-center justify-center',
         'transition-all duration-300 border-2 min-h-[88px]',
         isFound
           ? 'border-green-300 bg-green-50'
-          : isTarget
-            ? 'border-amber-300 kitchen-pulse'
-            : 'border-amber-100 hover:border-amber-200',
+          : 'border-amber-100 hover:border-amber-300 cursor-pointer active:scale-95',
         isJustFound ? 'found-glow' : '',
+        isWrong ? 'wrong-shake' : '',
       ].join(' ')}
     >
       <span
@@ -258,14 +192,13 @@ export default function KitchenISpy({
   );
   const [currentStep, setCurrentStep] = useState(0);
   const [foundItems, setFoundItems] = useState(new Set());
-  const [inputValue, setInputValue] = useState('');
   const [message, setMessage] = useState(null); // { text, type }
   const [hintRevealed, setHintRevealed] = useState(false);
   const [justFoundIndex, setJustFoundIndex] = useState(null);
+  const [wrongIndex, setWrongIndex] = useState(null);
   const [celebrationKey, setCelebrationKey] = useState(0);
   const [sessionStartTime] = useState(Date.now());
 
-  const inputRef = useRef(null);
   const messageTimerRef = useRef(null);
 
   // Current tier items (display order is fixed by zone)
@@ -274,15 +207,6 @@ export default function KitchenISpy({
   // Current clue target
   const currentTargetIndex = clueOrder[currentStep];
   const currentItem = tierItems?.[currentTargetIndex];
-
-  // ---------------------------------------------------------------------------
-  // Focus management
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (gameState === 'playing' && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [gameState, currentStep]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -311,32 +235,29 @@ export default function KitchenISpy({
     setClueOrder(shuffleArray(Array.from({ length: TOTAL_ITEMS_PER_TIER }, (_, i) => i)));
     setCurrentStep(0);
     setFoundItems(new Set());
-    setInputValue('');
     setMessage(null);
     setHintRevealed(false);
     setJustFoundIndex(null);
+    setWrongIndex(null);
     setGameState('playing');
   }, []);
 
   // ---------------------------------------------------------------------------
   // Handle answer submission
   // ---------------------------------------------------------------------------
-  const handleSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!inputValue.trim() || gameState !== 'playing' || !currentItem) return;
+  const handleItemClick = useCallback(
+    (idx) => {
+      if (gameState !== 'playing' || foundItems.has(idx) || !currentItem) return;
 
-      const result = checkAnswer(inputValue, currentItem.name);
-
-      if (result.correct) {
-        // -- Correct answer --
+      if (idx === currentTargetIndex) {
+        // -- Correct pick --
         const newFound = new Set(foundItems);
         newFound.add(currentTargetIndex);
         setFoundItems(newFound);
-        setInputValue('');
         setHintRevealed(false);
         setJustFoundIndex(currentTargetIndex);
         setCelebrationKey((prev) => prev + 1);
+        setWrongIndex(null);
 
         showTimedMessage({ text: 'You found it!', type: 'success' }, 1400);
 
@@ -370,16 +291,14 @@ export default function KitchenISpy({
           // Advance to next clue after a brief pause
           setTimeout(() => setCurrentStep((prev) => prev + 1), 1500);
         }
-      } else if (result.message) {
-        // -- Incorrect or near-miss --
-        showTimedMessage(
-          { text: result.message, type: result.nearMiss ? 'hint' : 'tryAgain' },
-          result.nearMiss ? 3000 : 2000
-        );
+      } else {
+        // -- Wrong pick --
+        setWrongIndex(idx);
+        showTimedMessage({ text: 'Not that one! Try again.', type: 'tryAgain' }, 1500);
+        setTimeout(() => setWrongIndex(null), 600);
       }
     },
     [
-      inputValue,
       gameState,
       currentItem,
       currentTargetIndex,
@@ -521,10 +440,6 @@ export default function KitchenISpy({
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-3">
       {/* Custom keyframe animations */}
       <style>{`
-        @keyframes gentle-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.5); }
-          50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); }
-        }
         @keyframes found-glow {
           0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); transform: scale(1); }
           40%  { box-shadow: 0 0 24px 6px rgba(34, 197, 94, 0.3); transform: scale(1.06); }
@@ -534,9 +449,14 @@ export default function KitchenISpy({
           0%   { opacity: 1; transform: translate(0, 0) scale(0.5); }
           100% { opacity: 0; transform: translate(var(--star-x), var(--star-y)) scale(1.2); }
         }
-        .kitchen-pulse { animation: gentle-pulse 2s ease-in-out infinite; }
+        @keyframes wrong-shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-4px); }
+          40%, 80% { transform: translateX(4px); }
+        }
         .found-glow    { animation: found-glow 0.8s ease-out; }
         .star-burst    { animation: star-burst 0.7s ease-out forwards; }
+        .wrong-shake   { animation: wrong-shake 0.4s ease-out; }
       `}</style>
 
       <div className="max-w-2xl mx-auto">
@@ -619,10 +539,9 @@ export default function KitchenISpy({
                       key={idx}
                       item={item}
                       isFound={foundItems.has(idx)}
-                      isTarget={
-                        idx === currentTargetIndex && !foundItems.has(idx)
-                      }
                       isJustFound={idx === justFoundIndex}
+                      isWrong={idx === wrongIndex}
+                      onClick={() => handleItemClick(idx)}
                     />
                   );
                 })}
@@ -656,58 +575,32 @@ export default function KitchenISpy({
         </div>
 
         {/* ----------------------------------------------------------------- */}
-        {/* Input area -- styled as a kitchen chalkboard                      */}
+        {/* Instruction area                                                  */}
         {/* ----------------------------------------------------------------- */}
-        <div className="bg-gray-800 rounded-2xl p-4 shadow-xl border-4 border-amber-800/70">
-          {/* Decorative chalk-dust edge */}
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-500/30 to-transparent mb-3" />
-
-          <div className="text-xs text-gray-400 mb-2.5 text-center font-medium tracking-wide">
-            Type the name of the item you spy
+        <div className="bg-gray-800 rounded-2xl p-4 shadow-xl border-4 border-amber-800/70 text-center">
+          <div className="text-amber-300 font-bold text-lg mb-1">
+            {'\uD83D\uDC46'} Tap the item you spy!
           </div>
-
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type your answer..."
-              className="flex-1 bg-gray-700/80 text-white text-lg px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 placeholder-gray-500 font-medium"
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck="false"
-            />
-            <button
-              type="submit"
-              disabled={!inputValue.trim()}
-              className="bg-amber-500 hover:bg-amber-400 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold px-5 py-3 rounded-xl transition-colors"
-            >
-              Check
-            </button>
-          </form>
+          <div className="text-gray-400 text-xs mb-3">
+            Read the clue, then tap the matching item above
+          </div>
 
           {/* Hint button */}
-          <div className="flex justify-center mt-3">
-            <button
-              type="button"
-              onClick={handleHint}
-              disabled={hintRevealed}
-              className={[
-                'text-xs px-4 py-1.5 rounded-lg transition-colors',
-                hintRevealed
-                  ? 'text-amber-300/60 cursor-default'
-                  : 'text-amber-400 hover:text-amber-300 hover:bg-gray-700/50',
-              ].join(' ')}
-            >
-              {hintRevealed
-                ? `Hint: Starts with "${currentItem?.name[0].toUpperCase()}"`
-                : '\uD83D\uDCA1 Need a hint?'}
-            </button>
-          </div>
-
-          {/* Decorative chalk-dust edge */}
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-500/30 to-transparent mt-3" />
+          <button
+            type="button"
+            onClick={handleHint}
+            disabled={hintRevealed}
+            className={[
+              'text-sm px-5 py-2 rounded-xl transition-colors',
+              hintRevealed
+                ? 'bg-amber-900/50 text-amber-300'
+                : 'bg-gray-700 text-amber-400 hover:text-amber-300 hover:bg-gray-600',
+            ].join(' ')}
+          >
+            {hintRevealed
+              ? `Starts with "${currentItem?.name[0].toUpperCase()}"`
+              : '\uD83D\uDCA1 Need a hint?'}
+          </button>
         </div>
 
         {/* ----------------------------------------------------------------- */}

@@ -453,6 +453,16 @@ export default function TypingTutor({ progressData, onRecordKeystroke, onEndSess
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
+  }, [handleKeyDown]);
+
   useEffect(() => {
     if (screen === 'practice' && inputRef.current) {
       inputRef.current.focus();
@@ -581,8 +591,13 @@ export default function TypingTutor({ progressData, onRecordKeystroke, onEndSess
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 p-4">
       <input
         ref={inputRef}
-        className="opacity-0 absolute pointer-events-none"
-        onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+        className="mobile-input"
+        inputMode="text"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        onInput={handleMobileInput}
+        onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         autoFocus
       />
 

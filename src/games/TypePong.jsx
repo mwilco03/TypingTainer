@@ -111,8 +111,13 @@ function pickWord(wordLengths, keyMetrics) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-function pickChallenge(level, keyMetrics) {
+function pickChallenge(level, keyMetrics, wordsInLevel) {
   const config = getLevelConfig(level);
+  // Warmup: first 3 words of each level (after level 1) use easier word lengths
+  if (wordsInLevel < 3 && level > 1) {
+    const easyConfig = getLevelConfig(level - 1);
+    return pickWord(easyConfig.wordLengths, keyMetrics);
+  }
   if (level >= 5 && Math.random() < 0.35) {
     const a = pickWord([3, 4], keyMetrics);
     let b = pickWord([3, 4], keyMetrics);
@@ -174,6 +179,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
   const onBallReachPlayerRef = useRef(null);
   const sessionReportedRef = useRef(false);
   const processingRef = useRef(false);
+  const levelWordsRef = useRef(0);
 
   // ---- Progress data ----
   const gameData = progressData.gameProgress.pong || { highScore: 0, levelsCleared: 0, totalSessions: 0 };
@@ -233,7 +239,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
   const startNewRound = useCallback((lvl) => {
     processingRef.current = false;
     const config = getLevelConfig(lvl);
-    const word = pickChallenge(lvl, keyMetrics);
+    const word = pickChallenge(lvl, keyMetrics, levelWordsRef.current);
     setCurrentWord(word);
     setTypedIndex(0);
     setFlashWrong(false);
@@ -268,6 +274,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
     setScoreFlash('player');
     setTimeout(() => setScoreFlash(null), 500);
     setWordsCompleted(c => c + 1);
+    levelWordsRef.current += 1;
 
     setPlayerScore(prev => {
       const next = prev + 1;
@@ -284,6 +291,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
           setPlayerScore(0);
           setOpponentScore(0);
           setGameState('playing');
+          levelWordsRef.current = 0;
           startNewRound(nextLvl);
         }, 2500);
       } else {
@@ -326,6 +334,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       e.preventDefault();
       sessionReportedRef.current = false;
       keysUsedRef.current = new Set();
+      levelWordsRef.current = 0;
       setGameState('playing');
       setSessionStartTime(Date.now());
       setLevel(1);
@@ -385,6 +394,16 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
+  }, [handleKeyDown]);
+
   // Cleanup animation on unmount
   useEffect(() => () => stopAnimation(), [stopAnimation]);
 
@@ -427,16 +446,22 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
   // ============================================================================
   if (gameState === 'ready') {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4 cursor-pointer"
+        onClick={startNewRound}>
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
           autoFocus
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         />
 
         <button
-          onClick={() => onNavigate('#/')}
+          onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 text-gray-500 hover:text-white text-sm transition-colors"
         >
           &larr; Home
@@ -490,7 +515,7 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
         )}
 
         <div className="animate-pulse text-lg text-teal-400 font-medium">
-          Press any key to start
+          Tap or press any key to start
         </div>
       </div>
     );
@@ -504,9 +529,14 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
           autoFocus
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         />
 
         <button
@@ -554,7 +584,6 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
             Back to Home
           </button>
         </div>
-        <div className="text-gray-700 text-xs mt-6">Press Enter to play again</div>
       </div>
     );
   }
@@ -569,9 +598,14 @@ export default function TypePong({ progressData, onRecordKeystroke, onEndSession
       {/* Hidden input for keystroke capture */}
       <input
         ref={inputRef}
-        className="opacity-0 absolute pointer-events-none"
+        className="mobile-input"
+        inputMode="text"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        onInput={handleMobileInput}
         autoFocus
-        onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+        onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
       />
 
       {/* ---- Top bar ---- */}

@@ -99,9 +99,19 @@ function getRoundConfig(round) {
   return ROUND_CONFIG[idx];
 }
 
-function createDuck(round, areaWidth, areaHeight) {
+function createDuck(round, areaWidth, areaHeight, ducksAlreadySpawned) {
   const config = getRoundConfig(round);
-  const word = getRandomWord(config.minLen, config.maxLen);
+  // Warmup: first 3 ducks of rounds > 1 use easier word lengths and slower speed
+  let minLen = config.minLen;
+  let maxLen = config.maxLen;
+  let baseFlight = config.flightDuration;
+  if (ducksAlreadySpawned < 3 && round > 1) {
+    const easyConfig = getRoundConfig(round - 1);
+    minLen = easyConfig.minLen;
+    maxLen = easyConfig.maxLen;
+    baseFlight += 800;
+  }
+  const word = getRandomWord(minLen, maxLen);
   const groundHeight = 80;
   const minY = 40;
   const maxY = areaHeight - groundHeight - 80;
@@ -118,7 +128,7 @@ function createDuck(round, areaWidth, areaHeight) {
     bobAmplitude,
     bobFrequency,
     spawnTime: Date.now(),
-    flightDuration: config.flightDuration + (Math.random() - 0.5) * 600,
+    flightDuration: baseFlight + (Math.random() - 0.5) * 600,
     state: 'flying',       // flying | hit | escaped
     hitTime: null,
     areaWidth,
@@ -331,7 +341,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
         activeDucks < config.maxDucks &&
         now - lastSpawnRef.current > config.spawnInterval
       ) {
-        const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight);
+        const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight, ducksSpawnedRef.current);
         setDucks((prev) => [...prev, newDuck]);
         setDucksSpawned((prev) => {
           const val = prev + 1;
@@ -362,7 +372,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
       const currentAreaHeight = gameAreaRef.current
         ? gameAreaRef.current.getBoundingClientRect().height
         : areaSize.height;
-      const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight);
+      const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight, 0);
       setDucks([newDuck]);
       setDucksSpawned(1);
       ducksSpawnedRef.current = 1;
@@ -551,6 +561,16 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  const handleMobileInput = useCallback((e) => {
+    const data = e.nativeEvent?.data || e.data;
+    if (data) {
+      for (const ch of data) {
+        handleKeyDown({ key: ch, preventDefault() {} });
+      }
+    }
+    if (e.target) e.target.value = '';
   }, [handleKeyDown]);
 
   // ============================================================================
@@ -816,21 +836,27 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
   if (gameState === 'ready') {
     return (
       <div
-        className="min-h-screen flex flex-col relative overflow-hidden select-none"
+        className="min-h-screen flex flex-col relative overflow-hidden select-none cursor-pointer"
+        onClick={startGame}
         style={{
           background: 'linear-gradient(180deg, #7dd3fc 0%, #38bdf8 30%, #0ea5e9 60%, #0284c7 100%)',
         }}
       >
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
           autoFocus
         />
 
         {/* Back button */}
         <button
-          onClick={() => onNavigate('#/')}
+          onClick={(e) => { e.stopPropagation(); onNavigate('#/'); }}
           className="absolute top-4 left-4 z-30 bg-white/20 hover:bg-white/40 backdrop-blur text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
         >
           &larr; Home
@@ -886,7 +912,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
             className="bg-white/20 backdrop-blur-sm px-8 py-4 rounded-2xl border border-white/30 animate-pulse"
           >
             <span className="text-white text-lg font-bold" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-              Press any key to start
+              Tap or press any key to start
             </span>
           </div>
 
@@ -944,8 +970,13 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
       >
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
           autoFocus
         />
 
@@ -991,7 +1022,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
               onClick={startGame}
             >
               <span className="text-white text-lg font-bold">
-                Play Again (Enter)
+                Play Again
               </span>
             </div>
 
@@ -1035,8 +1066,13 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
       >
         <input
           ref={inputRef}
-          className="opacity-0 absolute pointer-events-none"
-          onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+          className="mobile-input"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          onInput={handleMobileInput}
+          onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
           autoFocus
         />
 
@@ -1077,7 +1113,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
             }}
           >
             <span className="text-white text-lg font-bold">
-              {failed ? 'See Results (Enter)' : `Next Round (Enter)`}
+              {failed ? 'See Results' : 'Next Round'}
             </span>
           </div>
         </div>
@@ -1108,8 +1144,13 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
     >
       <input
         ref={inputRef}
-        className="opacity-0 absolute pointer-events-none"
-        onBlur={(e) => setTimeout(() => e.target?.focus(), 10)}
+        className="mobile-input"
+        inputMode="text"
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        onInput={handleMobileInput}
+        onBlur={(e) => setTimeout(() => e.target?.focus(), 50)}
         autoFocus
       />
 

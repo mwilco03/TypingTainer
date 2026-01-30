@@ -12,6 +12,8 @@ import WordHunt from './games/WordHunt';
 import KitchenISpy from './games/KitchenISpy';
 import TypingJournal from './games/TypingJournal';
 import TypeDance from './games/TypeDance';
+import TypeBreakout from './games/TypeBreakout';
+import ParentChallenge from './pages/ParentChallenge';
 
 // Error boundary to prevent full-app crashes from game errors
 class ErrorBoundary extends React.Component {
@@ -160,6 +162,19 @@ export default function App() {
 
     case 'typedance':
       content = <TypeDance {...sharedProps} />;
+      break;
+
+    case 'breakout':
+      content = <TypeBreakout {...sharedProps} />;
+      break;
+
+    case 'challenge':
+      content = (
+        <ParentChallenge
+          encodedData={routePath[1] || ''}
+          onNavigate={navigate}
+        />
+      );
       break;
 
     case 'progress':
