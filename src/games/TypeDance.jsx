@@ -102,9 +102,15 @@ function getLevelConfig(level) {
   return { fallDuration, spawnInterval, pool };
 }
 
-function createNote(level, laneIndex) {
+function createNote(level, laneIndex, notesAlreadySpawned) {
   const config = getLevelConfig(level);
-  const pool = NOTE_POOLS[config.pool];
+  // Warmup: first 4 notes of bigram/word levels use the previous tier
+  let poolName = config.pool;
+  if (notesAlreadySpawned < 4 && level > 2) {
+    if (poolName === 'bigrams') poolName = 'letters';
+    else if (poolName === 'words') poolName = 'bigrams';
+  }
+  const pool = NOTE_POOLS[poolName];
   const text = pool[Math.floor(Math.random() * pool.length)];
 
   return {
@@ -308,7 +314,7 @@ export default function TypeDance({ progressData, onRecordKeystroke, onEndSessio
       if (notesSpawnedRef.current < NOTES_PER_LEVEL && now - lastSpawnRef.current > config.spawnInterval) {
         // Pick a random lane, avoid same lane twice in a row
         const lane = Math.floor(Math.random() * LANE_COUNT);
-        const newNote = createNote(levelRef.current, lane);
+        const newNote = createNote(levelRef.current, lane, notesSpawnedRef.current);
         setNotes(prev => [...prev, newNote]);
         setNotesSpawned(prev => {
           const val = prev + 1;

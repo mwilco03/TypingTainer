@@ -99,9 +99,19 @@ function getRoundConfig(round) {
   return ROUND_CONFIG[idx];
 }
 
-function createDuck(round, areaWidth, areaHeight) {
+function createDuck(round, areaWidth, areaHeight, ducksAlreadySpawned) {
   const config = getRoundConfig(round);
-  const word = getRandomWord(config.minLen, config.maxLen);
+  // Warmup: first 3 ducks of rounds > 1 use easier word lengths and slower speed
+  let minLen = config.minLen;
+  let maxLen = config.maxLen;
+  let baseFlight = config.flightDuration;
+  if (ducksAlreadySpawned < 3 && round > 1) {
+    const easyConfig = getRoundConfig(round - 1);
+    minLen = easyConfig.minLen;
+    maxLen = easyConfig.maxLen;
+    baseFlight += 800;
+  }
+  const word = getRandomWord(minLen, maxLen);
   const groundHeight = 80;
   const minY = 40;
   const maxY = areaHeight - groundHeight - 80;
@@ -118,7 +128,7 @@ function createDuck(round, areaWidth, areaHeight) {
     bobAmplitude,
     bobFrequency,
     spawnTime: Date.now(),
-    flightDuration: config.flightDuration + (Math.random() - 0.5) * 600,
+    flightDuration: baseFlight + (Math.random() - 0.5) * 600,
     state: 'flying',       // flying | hit | escaped
     hitTime: null,
     areaWidth,
@@ -331,7 +341,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
         activeDucks < config.maxDucks &&
         now - lastSpawnRef.current > config.spawnInterval
       ) {
-        const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight);
+        const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight, ducksSpawnedRef.current);
         setDucks((prev) => [...prev, newDuck]);
         setDucksSpawned((prev) => {
           const val = prev + 1;
@@ -362,7 +372,7 @@ export default function WordHunt({ progressData, onRecordKeystroke, onEndSession
       const currentAreaHeight = gameAreaRef.current
         ? gameAreaRef.current.getBoundingClientRect().height
         : areaSize.height;
-      const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight);
+      const newDuck = createDuck(roundRef.current, currentAreaWidth, currentAreaHeight, 0);
       setDucks([newDuck]);
       setDucksSpawned(1);
       ducksSpawnedRef.current = 1;
