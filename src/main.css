@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   Accessibility overrides -- toggled via classes on <html>
+   ============================================================================ */
+
+/* Reduce motion */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* High contrast */
+.high-contrast {
+  --tw-text-opacity: 1;
+  filter: contrast(1.25);
+}
+
+/* Larger text */
+.large-text {
+  font-size: 120%;
+}
+
+/* Dyslexia-friendly font */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.dyslexia-font,
+.dyslexia-font * {
+  font-family: 'OpenDyslexic', sans-serif !important;
+}
+
+/* Colorblind mode -- add patterns/labels to color-only indicators */
+.colorblind-mode .bg-green-400,
+.colorblind-mode .bg-green-500,
+.colorblind-mode .bg-green-600 {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(255,255,255,0.2) 3px,
+    rgba(255,255,255,0.2) 6px
+  );
+}
+
+.colorblind-mode .bg-red-400,
+.colorblind-mode .bg-red-500,
+.colorblind-mode .bg-red-100 {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.1) 3px,
+    rgba(0,0,0,0.1) 6px
+  );
+}
