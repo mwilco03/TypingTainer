@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import ProgressionEngine from '../engine/ProgressionEngine';
 
 function StatCard({ label, value, sub, color = 'text-blue-600' }) {
@@ -189,6 +190,19 @@ export default function ProgressReport({ progressData, onNavigate, onReset }) {
             <p className="text-xs text-gray-500 mb-3">
               Share this link with a parent or teacher. They can try a typing challenge
               built from the keys that need the most practice.
+            </p>
+            <div className="flex justify-center mb-3">
+              <div className="bg-white p-3 rounded-xl border border-gray-200">
+                <QRCodeSVG
+                  value={challengeUrl}
+                  size={160}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 text-center mb-2">
+              Scan with a phone camera to open the challenge
             </p>
             <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-600 break-all select-all">
               {challengeUrl}

@@ -59,6 +59,7 @@ function createDefaultData() {
       kitchen: { completedTiers: [], totalSessions: 0 },
       journal: { totalSessions: 0, totalWords: 0, totalEntries: 0 },
       typedance: { highScore: 0, bestLevel: 0, bestCombo: 0, totalSessions: 0 },
+      breakout: { highScore: 0, bestLevel: 0, bestCombo: 0, totalSessions: 0 },
     },
 
     // Session history for parent reports
@@ -410,6 +411,7 @@ const ProgressionEngine = {
             kitchen: { ...defaults.gameProgress.kitchen, ...(parsed.gameProgress?.kitchen || {}) },
             journal: { ...defaults.gameProgress.journal, ...(parsed.gameProgress?.journal || {}) },
             typedance: { ...defaults.gameProgress.typedance, ...(parsed.gameProgress?.typedance || {}) },
+            breakout: { ...defaults.gameProgress.breakout, ...(parsed.gameProgress?.breakout || {}) },
           },
           unlockables: { ...defaults.unlockables, ...(parsed.unlockables || {}) },
         };

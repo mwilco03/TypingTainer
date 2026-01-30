@@ -72,6 +72,16 @@ const GAMES = [
     description: 'DDR-style rhythm typing. Notes fall down lanes \u2014 type them when they hit the zone. Build combos for bonus points!',
     category: 'arcade',
   },
+  {
+    id: 'breakout',
+    route: '#/breakout',
+    name: 'Type Breaker',
+    tagline: 'Smash bricks by typing!',
+    icon: '\uD83E\uDDF1',
+    color: 'from-blue-500 to-cyan-600',
+    description: 'Classic brick breaker meets typing. Type words to shatter bricks before time runs out!',
+    category: 'arcade',
+  },
 ];
 
 function GameCard({ game, onNavigate }) {
